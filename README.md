@@ -1,5 +1,7 @@
 # Masters Union - CRM Platform Assignment
 
+Youtube refrence video :- https://youtu.be/LG4KfaayQC4
+
 A comprehensive Customer Relationship Management (CRM) platform built with the MERN stack, PostgreSQL, and real-time features.
 
 ## 📁 Project Structure
