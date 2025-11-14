@@ -1,0 +1,174 @@
+// Prisma Schema for CRM Platform
+// This defines a normalized database structure with efficient relations
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with role-based access control
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  role      Role     @default(SALES_EXECUTIVE)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  leads              Lead[]       @relation("LeadOwner")
+  activities         Activity[]
+  notifications      Notification[]
+  createdLeads       Lead[]       @relation("LeadCreator")
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_EXECUTIVE
+}
+
+// Lead model for customer relationship management
+model Lead {
+  id          String     @id @default(uuid())
+  firstName   String     @map("first_name")
+  lastName    String     @map("last_name")
+  email       String     @unique
+  phone       String?
+  company     String?
+  position    String?
+  status      LeadStatus @default(NEW)
+  source      String?    // e.g., Website, Referral, Cold Call
+  value       Float?     @default(0) // Potential deal value
+  priority    Priority   @default(MEDIUM)
+  notes       String?    @db.Text
+  
+  // Ownership tracking
+  ownerId     String     @map("owner_id")
+  owner       User       @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  createdById String     @map("created_by_id")
+  createdBy   User       @relation("LeadCreator", fields: [createdById], references: [id])
+  
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  activities  Activity[]
+  history     LeadHistory[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+  INACTIVE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Activity model for tracking all interactions
+model Activity {
+  id          String       @id @default(uuid())
+  type        ActivityType
+  title       String
+  description String?      @db.Text
+  outcome     String?      @db.Text
+  duration    Int?         // in minutes
+  scheduledAt DateTime?    @map("scheduled_at")
+  completedAt DateTime?    @map("completed_at")
+  
+  // Relations
+  leadId      String       @map("lead_id")
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([type])
+  @@index([scheduledAt])
+  @@map("activities")
+}
+
+enum ActivityType {
+  NOTE
+  CALL
+  MEETING
+  EMAIL
+  TASK
+  STATUS_CHANGE
+}
+
+// Lead History for audit trail
+model LeadHistory {
+  id          String   @id @default(uuid())
+  leadId      String   @map("lead_id")
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  fieldName   String   @map("field_name")
+  oldValue    String?  @map("old_value") @db.Text
+  newValue    String?  @map("new_value") @db.Text
+  changedBy   String   @map("changed_by")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([leadId])
+  @@index([createdAt])
+  @@map("lead_history")
+}
+
+// Notification model for real-time updates
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String           @db.Text
+  type      NotificationType
+  isRead    Boolean          @default(false) @map("is_read")
+  metadata  Json?            // Additional data like leadId, activityId, etc.
+  
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  LEAD_ASSIGNED
+  LEAD_STATUS_CHANGED
+  ACTIVITY_REMINDER
+  SYSTEM_ALERT
+  MENTION
+}
+
