@@ -1,5 +1,7 @@
 # 🚀 Modern CRM Platform
 
+Youtube go through video :- https://youtu.be/LG4KfaayQC4
+
 A full-stack Customer Relationship Management (CRM) platform built with the MERN stack, PostgreSQL, and real-time features using Socket.io. Designed for fast-scaling startups with role-based access control, automated workflows, and comprehensive analytics.
 
 ## 📋 Table of Contents
